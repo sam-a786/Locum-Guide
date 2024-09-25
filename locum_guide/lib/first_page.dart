@@ -1,6 +1,7 @@
 // first_page.dart
 import 'package:flutter/material.dart';
-import 'second_page.dart'; // Import the second page so you can navigate to it
+import 'package:firebase_auth/firebase_auth.dart'; // Firebase Auth import
+import 'second_page.dart';
 
 class FirstPage extends StatelessWidget {
   const FirstPage({super.key});
@@ -9,6 +10,7 @@ class FirstPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final TextEditingController emailController = TextEditingController();
     final TextEditingController gdcController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
 
     return Scaffold(
       appBar: AppBar(
@@ -34,31 +36,47 @@ class FirstPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             TextField(
-              controller: gdcController,
+              controller: passwordController,
               decoration: const InputDecoration(
-                labelText: 'GDC Number',
-                prefixIcon: Icon(Icons.person),
+                labelText: 'Password',
+                prefixIcon: Icon(Icons.lock),
                 border: OutlineInputBorder(),
               ),
-              keyboardType: TextInputType.number,
+              obscureText: true,
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                // Navigate to the second page
-                if (emailController.text.isNotEmpty && gdcController.text.isNotEmpty) {
+              onPressed: () async {
+                try {
+                  // Firebase Auth sign-in
+                  UserCredential userCredential = await FirebaseAuth.instance
+                      .createUserWithEmailAndPassword(
+                    email: emailController.text.trim(),
+                    password: passwordController.text.trim(),
+                  );
+                  
+                  // Once signed in, navigate to the second page
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const SecondPage()),
                   );
-                } else {
-                  // Show error if fields are empty
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill in both fields')),
-                  );
+                } on FirebaseAuthException catch (e) {
+                  if (e.code == 'weak-password') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('The password is too weak.')),
+                    );
+                  } else if (e.code == 'email-already-in-use') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('This email is already in use.')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.message!)),
+                    );
+                  }
                 }
               },
-              child: const Text('Log In/Access'),
+              child: const Text('Sign Up/Log In'),
             ),
           ],
         ),
